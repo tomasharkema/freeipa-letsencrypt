@@ -1,8 +1,9 @@
 #!/usr/bin/bash
 set -o nounset -o errexit
+set -x
 
 WORKDIR=$(dirname "$(realpath $0)")
-EMAIL=""
+EMAIL="tomas@harkema.io"
 
 # This is needed for enabling the certificates
 # TODO : Store safely
@@ -45,15 +46,15 @@ done
 if [ "$needs_cleanup" = true ]; then
 	#backup
 	echo "BACKUP"
-	mkdir -p "$WORKDIR"/backup
-	rm -f "$WORKDIR"/backup/*
-	mv "$WORKDIR"/*.key "$WORKDIR"/backup/
-	mv "$WORKDIR"/*.pem "$WORKDIR"/backup/
+	mkdir -p "$WORKDIR"/backup || true
+	rm -f "$WORKDIR"/backup/* || true
+	mv "$WORKDIR"/*.key "$WORKDIR"/backup/ || true
+	mv "$WORKDIR"/*.pem "$WORKDIR"/backup/ || true
 
 	#cleanup
-	rm -f "$WORKDIR"/*.csr
-	rm -f "$WORKDIR"/*.key
-	rm -f "$WORKDIR"/*.pem
+	#rm -f "$WORKDIR"/*.csr
+	#rm -f "$WORKDIR"/*.key
+	#rm -f "$WORKDIR"/*.pem
 fi
 
 # generate CSR
@@ -63,7 +64,7 @@ openssl req -new -config "$WORKDIR/ipa-httpd.cnf" -keyout "$WORKDIR/req.key" -ou
 service httpd stop
 
 # get a new cert
-letsencrypt certonly --standalone --csr "$WORKDIR/req.csr" --email "$EMAIL" --agree-tos --cert-path "$WORKDIR/cert.pem" --chain-path "$WORKDIR/chain.pem" --fullchain-path "$WORKDIR/fullchain.pem"
+letsencrypt certonly --dns-cloudflare --dns-cloudflare-credentials /root/certbot/cloudflare.ini --csr "$WORKDIR/req.csr" --email "$EMAIL" --agree-tos --cert-path "$WORKDIR/cert.pem" --chain-path "$WORKDIR/chain.pem" --fullchain-path "$WORKDIR/fullchain.pem"
 
 # replace the cert
 yes $DIRPASSWD "" | ipa-server-certinstall -w -d "$WORKDIR/req.key" "$WORKDIR/cert.pem"
